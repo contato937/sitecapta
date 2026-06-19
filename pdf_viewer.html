@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin:0; background:#222; }
+  canvas { display:block; width:100%; margin:0 auto 8px; }
+  #status { color:#fff; font-family:sans-serif; padding:8px; }
+</style>
+</head>
+<body>
+<div id="status">loading…</div>
+<div id="pages"></div>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>
+const status = document.getElementById('status');
+const pagesEl = document.getElementById('pages');
+window.__rendered = false;
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+(async () => {
+  try {
+    const r = await fetch('uploads/CAPTA%20SITE.pdf');
+    const buf = await r.arrayBuffer();
+    status.textContent = 'loaded bytes '+buf.byteLength;
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    status.textContent = 'pdf pages '+pdf.numPages;
+    window.__donepages = [];
+    for (const i of [5,3,2,1]){
+      const page = await pdf.getPage(i);
+      const vp = page.getViewport({ scale: 1.4 });
+      const canvas = document.createElement('canvas');
+      canvas.width = vp.width; canvas.height = vp.height;
+      canvas.id = 'page'+i;
+      pagesEl.appendChild(canvas);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      window.__donepages.push(i);
+      status.textContent = 'rendered pages: '+window.__donepages.join(',');
+    }
+    window.__rendered = true;
+    status.textContent = 'done';
+  } catch(e){ status.textContent = 'ERR '+e.message; console.error(e); }
+})();
+</script>
+</body>
+</html>
